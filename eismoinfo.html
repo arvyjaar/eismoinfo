@@ -1,0 +1,265 @@
+<html>
+    <head>
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+        <link
+            rel="stylesheet"
+            href="https://cdn.jsdelivr.net/gh/openlayers/openlayers.github.io@master/en/v6.3.1/css/ol.css"
+            type="text/css"
+        />
+        <script src="https://cdn.jsdelivr.net/gh/openlayers/openlayers.github.io@master/en/v6.3.1/build/ol.js"></script>
+
+        <!-- Bootstrap CSS -->
+        <link
+            rel="stylesheet"
+            href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css"
+            integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u"
+            crossorigin="anonymous"
+        />
+
+        <!-- Optional Bootstrap theme -->
+        <link
+            rel="stylesheet"
+            href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap-theme.min.css"
+            integrity="sha384-rHyoN1iRsVXV4nD0JutlnGaslCJuC7uwjduW9SVrLvRYooPp2bWYgmgJQIXwl/Sp"
+            crossorigin="anonymous"
+        />
+
+        <!-- Bootstrap. Latest compiled and minified JavaScript -->
+        <script
+            src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"
+            integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa"
+            crossorigin="anonymous"
+        ></script>
+
+        <style>
+            #map {
+                height: 50em;
+                width: 100%;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+        
+            <div class="row">
+                <div class="col-12">
+                    <h3>Kelių oro sąlygų stotelių <b>retrospektyviniai</b> duomenys</h3>
+                    <p class="text-justify">Šalia valstybinės reikšmės kelių pastatytos automatinės kelių oro sąlygų stotelės iš kurių duomenys renkami į Valstybinės reikšmės kelių eismo informacinę sistemą. Kelių oro sąlygų stotelėse sumontuoti jutikliai matuojantys kelių būklei ir eismo sąlygoms nustatyti reikalingą informaciją (kelio dangos paviršiaus ir oro temperatūrą, oro santykinę drėgmę, rasos tašką, vėjo kryptį, greitį ir gūsius, kritulių intensyvumą ir tipą, matomumą, kelio dangos būklę, kelio konstrukcijos įšalo gylį ir kt.)</p>
+                    <p class="text-justify">Čia naudojami atviri duomenys, kurių šaltinis Lietuvos automobilių kelių direkcija prie Susisiekimo ministerijos (toliau - Kelių direkcija). Atviri Kelių direkcijos duomenys arba nuorodos į atvirus duomenis yra talpinamos internetinėse svetainėse lakd.lt, eismoinfo.lt ir opendata.gov.lt.</p>
+                </div>
+            </div>
+        
+        <div id="map"></div>
+        <div id="popup" class="ol-popup">
+            <a href="#" id="popup-closer" class="ol-popup-closer"></a>
+            <div id="popup-content"></div>
+        </div>
+
+        <div
+            class="modal fade"
+            id="modal"
+            tabindex="-1"
+            role="dialog"
+            aria-labelledby="exampleModalLabel"
+            aria-hidden="true"
+        >
+            <div class="modal-dialog" role="document">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h3 class="modal-title" id="modalLabel">
+                            Nenustatyta stotelė
+                        </h3>
+                        <button
+                            type="button"
+                            class="close"
+                            data-dismiss="modal"
+                            aria-label="Close"
+                        >
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                    <div class="modal-body">
+                        <form>
+                            <div class="form-group">
+                                <label
+                                    for="id"
+                                    class="col-form-label"
+                                    >Įrenginio id:</label
+                                >
+                                <input
+                                    type="text"
+                                    class="form-control"
+                                    id="id"
+                                />
+                            </div>
+                            <div class="form-group">
+                                <label for="datetime" class="col-form-label"
+                                    >Data ir laikas (YYYY-mm-dd hh:mm):</label
+                                >
+                                <input
+                                    class="form-control"
+                                    id="datetime"
+                                ></input>
+                            </div>
+                        </form>
+                        <div class="form group">
+                            <p><b class="location"></b></p>
+                        </div>
+                        <div class="result"></div>
+                    </div>
+                    
+                    
+                    <div class="modal-footer">
+                        <button
+                            type="button"
+                            class="btn btn-secondary"
+                            data-dismiss="modal"
+                        >
+                            Uždaryti
+                        </button>
+                        <button type="button" class="btn btn-primary" id="get-retrospective-weather">
+                            Orai
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- get retrospective weather for selected location -->
+        <script>
+            $(document).ready(function () {
+                // create OSM map
+
+                var map = new ol.Map({
+                    target: "map",
+                    layers: [
+                        new ol.layer.Tile({
+                            source: new ol.source.OSM(),
+                        }),
+                    ],
+                    view: new ol.View({
+                        center: ol.proj.fromLonLat([24.03, 55.22]),
+                        zoom: 8,
+                    }),
+                });
+
+                // Custom marker style - image
+
+                let iconStyle = new ol.style.Style({
+                    image: new ol.style.Icon({                  
+                        anchor: [0.5, 700],
+                        anchorXUnits: "fraction",
+                        anchorYUnits: "pixels",
+                        src: "img/marker1.png",
+                        scale: 0.03,
+                    }),
+                });
+
+                var features = [];
+                var markersLayer;
+                $.get(
+                    "http://eismoinfo.lt/weather-conditions-service",
+                    function (response, status) {
+                        for (var i = 0; i < response.length; i++) {
+                            let item = response[i];
+                            let lon = item.lng;
+                            let lat = item.lat;
+
+                            feature = new ol.Feature({
+                                geometry: new ol.geom.Point(
+                                    ol.proj.fromLonLat([lon, lat])
+                                ),
+                                name: item.irenginys,
+                                id: item.id,
+                            });
+
+                            features.push(feature);
+                        }
+                    }
+                )
+                    .done(function () {
+                        markersLayer = new ol.layer.Vector({
+                            source: new ol.source.Vector({
+                                features: features,
+                            }),
+                            style: iconStyle,
+                        });
+                    })
+                    .done(function () {
+                        map.addLayer(markersLayer);
+                    });
+
+                var element = document.getElementById("popup");
+
+                var popup = new ol.Overlay({
+                    element: element,
+                    positioning: "bottom-center",
+                    stopEvent: false,
+                    offset: [0, -10],
+                });
+                map.addOverlay(popup);
+
+                // display popup on click
+                map.on("click", function (evt) {
+                    var feature = map.forEachFeatureAtPixel(
+                        evt.pixel,
+                        function (feature) {
+                            return feature;
+                        }
+                    );
+                    if (feature) {
+                        $("#modal").on("show.bs.modal", function (
+                            event
+                        ) {
+                            //var button = $(event.relatedTarget); // ToDo ???
+
+                            var modal = $(this);
+                            modal.find(".modal-title").text(feature.get('name'));
+                            modal.find("#id").val(feature.get('id'));
+                        });
+
+                        $("#modal").modal("show");
+
+                    } else {
+                        $(element).popover("destroy");
+                    }
+                });
+
+                // Get weather history
+
+                $("#get-retrospective-weather").click(function () {
+                    let id = $("input[id=id]").val().trim();
+                    let datetime = $("input[id=datetime]").val().trim();
+                    dateObject = new Date(datetime);
+                    timestamp = dateObject.getTime() / 1000;
+
+                    $.get(
+                        "http://eismoinfo.lt/weather-conditions-retrospective?id=" +
+                            id +
+                            "&time=" +
+                            timestamp +
+                            "&number=10",
+                        function (response, status) {
+                            let obj = "no response";
+                            let resultsHtml = "";
+                            let location = "location not found";
+                            location = response[1].irenginys;
+                            for (var i = 0; i < response.length; i++) {
+                                obj = response[i];
+                                resultsHtml +=
+                                    obj.surinkimo_data +
+                                    "  |  " +
+                                    obj.oro_temperatura +
+                                    "<br>";
+                            }
+                            $(".location").html(location);
+                            $(".result").html(resultsHtml);
+                        }
+                    );
+                });
+            });
+        </script>
+
+        </div>
+    </body>
+</html>
